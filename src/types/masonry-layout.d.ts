@@ -1,16 +1,19 @@
 declare module 'masonry-layout' {
   interface MasonryOptions {
     itemSelector: string;
-    columnWidth?: number | string;
-    gutter?: number;
+    columnWidth?: number | string | Element;
+    gutter?: number | string;
     percentPosition?: boolean;
     horizontalOrder?: boolean;
+    fitWidth?: boolean;
     originLeft?: boolean;
     originTop?: boolean;
-    containerStyle?: string;
+    containerStyle?: CSSStyleDeclaration;
     transitionDuration?: string;
     resize?: boolean;
     initLayout?: boolean;
+    stagger?: number | string;
+    resizeContainer?: boolean;
   }
 
   class Masonry {

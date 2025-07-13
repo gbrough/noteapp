@@ -6,6 +6,7 @@ interface NoteType {
   id: number;
   title: string;
   content: string;
+  position: number;
 }
 
 interface NoteProps {
@@ -14,32 +15,38 @@ interface NoteProps {
   onDelete: (id: number) => void;
   onEdit: (note: NoteType) => void;
   moveNote: (dragIndex: number, hoverIndex: number) => void;
-
+  onDropEnd: () => void;
 }
 
 interface DragItem {
   index: number;
   id: number;
-  type: string;
+  type: 'NOTE';
 }
 
-const Note: React.FC<NoteProps> = ({ 
-  note, 
-  index, 
-  onDelete, 
-  onEdit, 
-  moveNote
+const Note: React.FC<NoteProps> = ({
+  note,
+  index,
+  onDelete,
+  onEdit,
+  moveNote,
+  onDropEnd
 }) => {
   const ref = useRef<HTMLDivElement>(null);
 
-  const [{ isDragging }, drag] = useDrag({
+  const [{ isDragging }, drag] = useDrag<DragItem, unknown, { isDragging: boolean }>({
     type: 'NOTE',
     item: () => {
-      return { id: note.id, index };
+      return { id: note.id, index, type: 'NOTE' };
     },
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
+    end: (_, monitor) => {
+      if (monitor.didDrop()) {
+        onDropEnd();
+      }
+    },
   });
 
   const [, drop] = useDrop({
@@ -103,15 +110,15 @@ const Note: React.FC<NoteProps> = ({
   return (
     <div 
       ref={ref}
-      className={`bg-white rounded-lg shadow-md p-4 group relative cursor-move transition-all ${isDragging ? 'opacity-50' : 'opacity-100'}`}
+      className={`bg-white rounded-lg shadow-md p-3 sm:p-4 group relative cursor-move transition-all ${isDragging ? 'opacity-50' : 'opacity-100'}`}
       onClick={() => onEdit(note)}
       style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
     >
       <div className="flex items-start">
-        <div className="mr-2 text-gray-300 hover:text-gray-400 cursor-move" style={{ touchAction: 'none' }}>
-          <MdDragIndicator size={20} />
+        <div className="mr-2 text-gray-300 hover:text-gray-400 cursor-move touch-none" style={{ touchAction: 'none' }}>
+          <MdDragIndicator className="w-5 h-5" />
         </div>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           {note.title && (
             <h2 className="text-xl font-bold mb-2">{note.title}</h2>
           )}
@@ -124,9 +131,10 @@ const Note: React.FC<NoteProps> = ({
       </div>
       <button 
         onClick={handleDelete}
-        className="absolute top-2 right-2 text-gray-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-gray-100"
+        className="absolute top-2 right-2 text-gray-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-gray-100 active:bg-gray-200"
+        aria-label="Delete note"
       >
-        <MdDelete size={18} />
+        <MdDelete className="w-4 h-4 sm:w-[18px] sm:h-[18px]" />
       </button>
     </div>
   );

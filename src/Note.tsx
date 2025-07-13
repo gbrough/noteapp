@@ -2,11 +2,12 @@ import { useRef } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 import { MdDelete, MdDragIndicator } from 'react-icons/md';
 
-interface NoteType {
+export interface NoteType {
   id: number;
   title: string;
   content: string;
   position: number;
+  user_id: string;
 }
 
 interface NoteProps {

@@ -3,25 +3,18 @@ import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { supabase } from './supabaseClient';
 import Note from './Note';
+import type { NoteType } from './Note';
 import EditNoteModal from './EditNoteModal';
 import Auth from './Auth';
 import Masonry from 'masonry-layout';
 
-interface NoteData {
-  id: number;
-  title: string;
-  content: string;
-  position: number;
-  user_id: string;
-}
-
 function App() {
   const [session, setSession] = useState<any>(null);
-  const [notes, setNotes] = useState<NoteData[]>([]);
+  const [notes, setNotes] = useState<NoteType[]>([]);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [isCreating, setIsCreating] = useState(false);
-  const [editingNote, setEditingNote] = useState<NoteData | null>(null);
+  const [editingNote, setEditingNote] = useState<NoteType | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

@@ -10,14 +10,28 @@ const Auth = () => {
   const handleAuth = async (event: React.FormEvent) => {
     event.preventDefault();
     setLoading(true);
-    const { error } = isSignUp
-      ? await supabase.auth.signUp({ email, password })
-      : await supabase.auth.signInWithPassword({ email, password });
+    let authResponse;
+    if (isSignUp) {
+      authResponse = await supabase.auth.signUp({ email, password });
+    } else {
+      authResponse = await supabase.auth.signInWithPassword({ email, password });
+    }
+
+    const { data, error } = authResponse;
 
     if (error) {
       alert(error.message);
+    } else if (data.user) {
+      // Successful login or sign-up (user object is present)
+      if (isSignUp) {
+        alert('Check your email for the verification link!');
+      } else {
+        // For login, no alert is needed as the App component will handle redirection
+        console.log('Login successful.');
+      }
     } else {
-      alert('Check your email for the login link!');
+      // This case might occur if sign-up is successful but email verification is pending
+      alert('Operation successful, but no user session. Check your email for verification.');
     }
     setLoading(false);
   };

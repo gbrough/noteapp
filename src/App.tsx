@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
+import Masonry from 'masonry-layout';
 import { supabase } from './supabaseClient';
 import Note from './Note';
 import EditNoteModal from './EditNoteModal';
-import Masonry from 'masonry-layout';
 
 interface Note {
   id: number;
@@ -19,18 +19,36 @@ function App() {
   const [isCreating, setIsCreating] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
+  const msnry = useRef<Masonry | null>(null);
 
   useEffect(() => {
     fetchNotes();
   }, []);
 
+  // Initialize Masonry
   useEffect(() => {
-    if (gridRef.current) {
-      new Masonry(gridRef.current, {
+    if (gridRef.current && !msnry.current) {
+      const masonry = new Masonry(gridRef.current, {
         itemSelector: '.grid-item',
         columnWidth: 240,
         gutter: 16,
-      });
+      }) as Masonry;
+      msnry.current = masonry;
+    }
+
+    // Cleanup function
+    return () => {
+      if (msnry.current) {
+        (msnry.current as Masonry).destroy();
+        msnry.current = null;
+      }
+    };
+  }, []);
+
+  // Update Masonry layout when notes change
+  useEffect(() => {
+    if (msnry.current) {
+      (msnry.current as Masonry).layout();
     }
   }, [notes]);
 

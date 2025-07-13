@@ -21,7 +21,7 @@ interface NoteProps {
 interface DragItem {
   index: number;
   id: number;
-  type: string;
+  type: 'NOTE';
 }
 
 const Note: React.FC<NoteProps> = ({
@@ -34,15 +34,15 @@ const Note: React.FC<NoteProps> = ({
 }) => {
   const ref = useRef<HTMLDivElement>(null);
 
-  const [{ isDragging }, drag] = useDrag({
+  const [{ isDragging }, drag] = useDrag<DragItem, unknown, { isDragging: boolean }>({
     type: 'NOTE',
     item: () => {
-      return { id: note.id, index };
+      return { id: note.id, index, type: 'NOTE' };
     },
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
-    end: (item, monitor) => {
+    end: (_, monitor) => {
       if (monitor.didDrop()) {
         onDropEnd();
       }

@@ -36,9 +36,8 @@ function App() {
       setNotes(notesWithPositions);
 
       const updates = notesWithPositions
-        .filter(note => note.position === index)
-        .map(note => 
-          supabase.from('notes').update({ position: note.position }).eq('id', note.id)
+        .map((note, idx) => 
+          supabase.from('notes').update({ position: idx }).eq('id', note.id)
         );
 
       await Promise.all(updates);

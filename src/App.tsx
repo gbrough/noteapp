@@ -1,29 +1,61 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { supabase } from './supabaseClient';
 import Note from './Note';
+import type { NoteType } from './Note';
 import EditNoteModal from './EditNoteModal';
-
-interface NoteData {
-  id: number;
-  title: string;
-  content: string;
-  position: number;
-}
+import Auth from './Auth';
+import Masonry from 'masonry-layout';
 
 function App() {
-  const [notes, setNotes] = useState<NoteData[]>([]);
+  const [session, setSession] = useState<any>(null);
+  const [notes, setNotes] = useState<NoteType[]>([]);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [isCreating, setIsCreating] = useState(false);
-  const [editingNote, setEditingNote] = useState<NoteData | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [editingNote, setEditingNote] = useState<NoteType | null>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
+      }
+    );
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (session) {
+      fetchNotes();
+    }
+  }, [session]);
+
+  useEffect(() => {
+    if (gridRef.current) {
+      new Masonry(gridRef.current, {
+        itemSelector: '.w-60',
+        columnWidth: 240,
+        gutter: 16,
+        fitWidth: true,
+      });
+    }
+  }, [notes]);
 
   const fetchNotes = async () => {
+    if (!session?.user?.id) return;
     const { data, error } = await supabase
       .from('notes')
       .select('*')
+      .eq('user_id', session.user.id)
       .order('position', { ascending: true });
 
     if (error) {
@@ -44,16 +76,14 @@ function App() {
     }
   };
 
-  useEffect(() => {
-    fetchNotes();
-  }, []);
-
   const addNote = async () => {
     if (!title && !content) return;
+    if (!session?.user?.id) return;
+
     const newPosition = notes.length > 0 ? Math.max(...notes.map(n => n.position)) + 1 : 0;
     const { data, error } = await supabase
       .from('notes')
-      .insert([{ title, content, position: newPosition }])
+      .insert([{ title, content, position: newPosition, user_id: session.user.id }])
       .select();
 
     if (error) {
@@ -105,23 +135,28 @@ function App() {
     await Promise.all(updates);
   };
 
-  const filteredNotes = notes.filter(note => 
-    note.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    note.content.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) console.error('Error logging out:', error);
+  };
+
+  if (!session) {
+    return <Auth />;
+  }
 
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="min-h-screen bg-gray-100 p-2 sm:p-4">
         <div className="max-w-6xl mx-auto px-2 sm:px-4">
+          <div className="flex justify-end mb-4">
+            <button 
+              onClick={handleLogout} 
+              className="bg-red-500 text-white px-4 py-2 rounded-md"
+            >
+              Logout
+            </button>
+          </div>
           <div className="mb-8">
-            <input
-              type="text"
-              placeholder="Search notes..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full p-3 mb-4 bg-white rounded-lg shadow-md focus:outline-none"
-            />
             {isCreating ? (
               <div className="bg-white p-3 sm:p-4 rounded-lg shadow-md">
                 <input
@@ -152,21 +187,21 @@ function App() {
               </div>
             )}
           </div>
-          <div className="w-full px-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 justify-items-center">
-              {filteredNotes.map((note, index) => (
-                <div key={note.id} className="w-60">
-                  <Note 
-                    note={note} 
-                    index={index}
-                    onDelete={deleteNote}
-                    onEdit={setEditingNote}
-                    moveNote={moveNote}
-                    onDropEnd={saveNoteOrder}
-                  />
-                </div>
-              ))}
-            </div>
+          <div className="flex justify-center">
+            <div ref={gridRef} className="px-4">
+                {notes.map((note, index) => (
+                  <div key={note.id} className="w-60">
+                    <Note 
+                      note={note} 
+                      index={index}
+                      onDelete={deleteNote}
+                      onEdit={setEditingNote}
+                      moveNote={moveNote}
+                      onDropEnd={saveNoteOrder}
+                    />
+                  </div>
+                ))}
+              </div>
           </div>
         </div>
         {editingNote && (

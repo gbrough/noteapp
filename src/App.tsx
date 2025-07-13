@@ -24,6 +24,7 @@ function App() {
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
+        console.log('Auth state changed:', _event, session);
         setSession(session);
       }
     );
@@ -136,8 +137,47 @@ function App() {
   };
 
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) console.error('Error logging out:', error);
+    console.log('Attempting to log out...');
+    try {
+      // First, try to refresh the session to ensure we have a valid one
+      const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+
+      if (refreshError) {
+        console.error('Error refreshing session before logout:', refreshError);
+        // If refresh fails, it means the session is likely already invalid.
+        // Proceed to sign out, but also clear local state.
+        setNotes([]);
+        setSession(null);
+        alert('Session refresh failed. Logging out locally.');
+        return;
+      }
+
+      // If refreshedSession is null, it means no active session.
+      if (!refreshedSession) {
+        console.log('No active session found after refresh. Logging out locally.');
+        setNotes([]);
+        setSession(null);
+        return;
+      }
+
+      // If we have a valid session, proceed with signOut
+      const { error: signOutError } = await supabase.auth.signOut();
+
+      if (signOutError) {
+        console.error('Error logging out from Supabase:', signOutError);
+        alert('Error logging out: ' + signOutError.message);
+      } else {
+        console.log('Logged out successfully from Supabase.');
+      }
+    } catch (e) {
+      console.error('Unexpected error during logout process:', e);
+      alert('An unexpected error occurred during logout.');
+    } finally {
+      // Ensure local state is cleared regardless of server response
+      setNotes([]);
+      setSession(null);
+      console.log('Local session state cleared.');
+    }
   };
 
   if (!session) {
